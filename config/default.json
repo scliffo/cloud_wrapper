@@ -1,0 +1,18 @@
+{
+  "analytics": "cloud_wrapper.templates.sample_analytics",
+  "storage": {
+    "defaults": {
+      "path": "tests/data"
+    },
+    "partitions": {
+      "sample": {
+        "model": "SimpleFileDataStore"
+      },
+      "model": {
+        "model": "AppendingFileDataStore"
+      }
+    },
+    "inputs": [ "sample" ],
+    "outputs": [ "model" ]
+  }
+}
