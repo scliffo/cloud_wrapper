@@ -1,0 +1,18 @@
+
+# Python virtual env
+venv
+
+# Test data
+data
+
+# Package build data
+build
+*.egg-info
+lambda_packages
+site-packages
+
+*.zip
+
+.DS_Store
+
+__pycache__
