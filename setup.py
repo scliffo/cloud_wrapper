@@ -11,11 +11,12 @@ setup(
     name='cloud_wrapper',
     version='0.1.0',
     description='Cloud Wrapper for running Analytics',
+    long_description_content_type='text/markdown',
     long_description=readme,
     author='kblaj41',
     author_email='kblaj41@gmail.com',
     url='https://github.com/kblaj41/cloud_wrapper',
-    license=license,
+    license="MIT License",
     include_package_data=True,
     packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
