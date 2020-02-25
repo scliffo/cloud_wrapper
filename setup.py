@@ -8,7 +8,7 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(
-    name='acssaw',
+    name='cloud_wrapper',
     version='0.1.0',
     description='Cloud Wrapper for running Analytics',
     long_description=readme,
@@ -38,5 +38,5 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
-  ]
+    ]
 )
