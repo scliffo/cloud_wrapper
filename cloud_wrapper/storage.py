@@ -335,7 +335,6 @@ class SimpleS3DataStore(_UpdatableDataStore, _S3DataStore):
     def __init__(self, params):
         self.bucketname = params['bucket']
         self.path = params['path'] + "/" + params['key'] + "/" + (params['partition'] + ".json")
-        print('S3 path:', self.bucketname, self.path)
 
 
 class SimpleDynamoDataStore(_UpdatableDataStore, _DynamoDataStore):
