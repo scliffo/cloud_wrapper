@@ -56,3 +56,12 @@ via an input file and model data is stored in a simple JSON file.
 Once installed and configured running analytics is simple
 
     python -m cloud_wrapper (device-id) (sample-file.json)
+
+## Packaging
+
+Some combination of
+
+    python setup.py sdist bdist_wheel
+    twine check dist/*
+    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+    twine upload dist/*
