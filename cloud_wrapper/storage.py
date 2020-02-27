@@ -320,20 +320,20 @@ class KinesisStreamOutput:
         data = json.loads(value)
         if type(data) is list:
             for record in data:
-                _put_stream(record)
+                self._put_stream(kinesis, record)
         else:
-            _put_stream(data)
+            self._put_stream(kinesis, data)
 
     def update(self, attr, value):
         pass
 
-    def _put_stream(self, record):
+    def _put_stream(self, kinesis, record):
         record['dataType'] = self.datatype
         record['timestamp'] = int(time.time() * 1000)
         record['tenantId'] = self.tenant
         record['motorId'] = self.key
         kinesis.put_record(StreamName=self.streamname,
-            Data=str.encode(json.dumps(record).encode()),
+            Data=json.dumps(record).encode(),
             PartitionKey=str(uuid.uuid4()))
 
 class SimpleFileDataStore(_UpdatableDataStore, _FileDataStore):
