@@ -35,5 +35,5 @@ def analyse(device, config=None, data=None):
     else:
         analytics = importlib.import_module('process.analytics')
 
-    data_store = storage.DataStore(config, data)
+    data_store = storage.DataStore(analytics_config, data)
     data_store.store(device, analytics.process(data_store.retrieve(device)))

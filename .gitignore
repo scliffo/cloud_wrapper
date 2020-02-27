@@ -21,3 +21,6 @@ dist
 build
 
 tests/test_local.py
+
+.idea
+.vscode
