@@ -1,6 +1,7 @@
 {
   "analytics": "cloud_wrapper.templates.sample_analytics",
   "storage": {
+    "debug": true,
     "defaults": {
       "path": "tests/data"
     },

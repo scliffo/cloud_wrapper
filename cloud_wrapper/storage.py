@@ -27,7 +27,10 @@ class DataStore:
         self.partitions = config['storage']['partitions']
         self.readable = config['storage']['inputs']
         self.writable = config['storage']['outputs']
-        self.debug = False
+        if 'debug' in config['storage']:
+            self.debug = config['storage']['debug']
+        else:
+            self.debug = False
 
     def retrieve(self, key):
         """
