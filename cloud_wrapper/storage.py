@@ -10,6 +10,7 @@ from jsonmerge import merge
 import decimal
 import uuid
 import time
+import types
 
 class DataStoreException(Exception):
     """
@@ -26,6 +27,7 @@ class DataStore:
         self.partitions = config['storage']['partitions']
         self.readable = config['storage']['inputs']
         self.writable = config['storage']['outputs']
+        self.debug = False
 
     def retrieve(self, key):
         """
@@ -49,6 +51,8 @@ class DataStore:
                 print("ERROR:", partition, "- unable to load " + partition + " data for " + key)
                 print("ERROR:", partition, "-", repr(err))
                 result[partition] = None
+                if self.debug:
+                    raise err
 
         return result
 
@@ -83,6 +87,8 @@ class DataStore:
             except Exception as err:
                 print("ERROR:", partition, "- unable to store " + partition + " data for " + key)
                 print("ERROR:", partition, "-", repr(err))
+                if self.debug:
+                    raise err
 
     def _merge_params(self, key, partition):
         params = merge(self.partitions[partition], self.config["storage"]["defaults"])
@@ -92,8 +98,10 @@ class DataStore:
             params = merge(params, { "partition": partition, "key": key })
 
         for index, value in params.items():
-            if value.startswith('eval:'):
+            if type(value) is str and value.startswith('eval:'):
                 params[index] = self._eval(key, partition, value[5:])
+            elif isinstance(value, types.FunctionType):
+                params[index] = value(partition=partition, key=key, config=self.config)
 
         return params
 
@@ -335,7 +343,6 @@ class SimpleS3DataStore(_UpdatableDataStore, _S3DataStore):
     def __init__(self, params):
         self.bucketname = params['bucket']
         self.path = params['path'] + "/" + params['key'] + "/" + (params['partition'] + ".json")
-        print('S3 path:', self.bucketname, self.path)
 
 
 class SimpleDynamoDataStore(_UpdatableDataStore, _DynamoDataStore):
@@ -368,16 +375,10 @@ class DynamoCollectionDataStore(_DynamoDataStore):
     """
     def __init__(self, params):
         self.tablename = params['table']
-        self.index_name = params['index']
-        self.key_condition_expression = params['keyConditionExpression']
-        self.expression_attribute_values = params['expressionAttributeValues']
+        self.query = params['query']
 
     def get(self) -> str:
-        return json.dumps(self._table().query(
-            IndexName=self.index_name,
-            KeyConditionExpression=self.key_condition_expression,
-            ExpressionAttributeValues=self.expression_attribute_values
-            )['Items'])
+        return json.dumps(self._table().query(**self.query)['Items'])
 
     def put(self, value):
         pass
