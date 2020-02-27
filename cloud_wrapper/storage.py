@@ -317,7 +317,17 @@ class KinesisStreamOutput:
 
     def put(self, value):
         kinesis = boto3.client('kinesis')
-        record = json.loads(value)
+        data = json.loads(value)
+        if type(data) is list:
+            for record in data:
+                _put_stream(record)
+        else:
+            _put_stream(data)
+
+    def update(self, attr, value):
+        pass
+
+    def _put_stream(self, record):
         record['dataType'] = self.datatype
         record['timestamp'] = int(time.time() * 1000)
         record['tenantId'] = self.tenant
@@ -325,9 +335,6 @@ class KinesisStreamOutput:
         kinesis.put_record(StreamName=self.streamname,
             Data=str.encode(json.dumps(record).encode()),
             PartitionKey=str(uuid.uuid4()))
-
-    def update(self, attr, value):
-        pass
 
 class SimpleFileDataStore(_UpdatableDataStore, _FileDataStore):
     """
