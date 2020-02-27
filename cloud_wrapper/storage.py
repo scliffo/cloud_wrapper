@@ -367,16 +367,17 @@ class DynamoCollectionDataStore(_DynamoDataStore):
     """
     def __init__(self, params):
         self.tablename = params['table']
-        self.index_name = params['index']
-        self.key_condition_expression = params['keyConditionExpression']
-        self.expression_attribute_values = params['expressionAttributeValues']
+        self.key = params['key']
+        self.params = params
 
     def get(self) -> str:
-        return json.dumps(self._table().query(
-            IndexName=self.index_name,
-            KeyConditionExpression=self.key_condition_expression,
-            ExpressionAttributeValues=self.expression_attribute_values
-            )['Items'])
+        kwargs = {}
+        args = ['KeyConditionExpression', 'ExpressionAttributeValues', 'ExpressionAttributeNames', 'IndexName']
+        for arg in args:
+            if arg in self.params:
+                kwargs[arg] = self.params[arg]
+        
+        return json.dumps(self._table().query(**kwargs)['Items'])
 
     def put(self, value):
         pass
