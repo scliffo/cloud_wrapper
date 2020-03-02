@@ -310,7 +310,7 @@ class KinesisStreamOutput:
         self.partition = params['partition']
         self.streamname = params['streamname']
         self.datatype = params['datatype']
-        self.tenantId = params['tenantId']
+        self.tenant = params['tenant']
         self.deviceId = params['deviceId']
 
     def get(self) -> str:
@@ -331,7 +331,7 @@ class KinesisStreamOutput:
     def _put_stream(self, kinesis, record):
         record['dataType'] = self.datatype
         record['timestamp'] = int(time.time() * 1000)
-        record['tenantId'] = self.tenantId
+        record['tenantId'] = self.tenant
         record['motorId'] = self.key
         record['deviceId'] = self.deviceId
         kinesis.put_record(StreamName=self.streamname,
