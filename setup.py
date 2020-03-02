@@ -9,7 +9,7 @@ with open('LICENSE') as f:
 
 setup(
     name='cloud_wrapper',
-    version='0.4.2',
+    version='0.4.3',
     description='Cloud Wrapper for running Analytics',
     long_description_content_type='text/markdown',
     long_description=readme,

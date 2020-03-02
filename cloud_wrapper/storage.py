@@ -51,8 +51,8 @@ class DataStore:
                     ds = SimpleFileDataStore(params)
                 result[partition] = ds.get()
             except Exception as err:
-                print("ERROR:", partition, "- unable to load " + partition + " data for " + key)
-                print("ERROR:", partition, "-", repr(err))
+                print("WARNING:", partition, "- unable to load " + partition + " data for " + key)
+                print("WARNING:", partition, "-", repr(err))
                 result[partition] = None
                 if self.debug:
                     raise err
@@ -88,8 +88,8 @@ class DataStore:
                 else:
                     print("storing " + partition + " data not supported")
             except Exception as err:
-                print("ERROR:", partition, "- unable to store " + partition + " data for " + key)
-                print("ERROR:", partition, "-", repr(err))
+                print("WARNING:", partition, "- unable to store " + partition + " data for " + key)
+                print("WARNING:", partition, "-", repr(err))
                 if self.debug:
                     raise err
 
