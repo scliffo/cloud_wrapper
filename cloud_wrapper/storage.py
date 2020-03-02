@@ -42,25 +42,9 @@ class DataStore:
         The data is returned in a list, with a JSON string per readable partition.
         """
         result = {}
-
         for partition in self.readable:
-            try:
-                params = self._merge_params(key, partition)
-                if self.data:
-                    params['data'] = self.data
-                if partition in self.partitions:
-                    store = self.partitions[partition]["model"].split(",")
-                    ds = eval(store[0] + "(params)")
-                else:
-                    ds = SimpleFileDataStore(params)
-                result[partition] = ds.get()
-            except Exception as err:
-                print("WARNING:", partition, "- unable to load " + partition + " data for " + key)
-                print("WARNING:", partition, "-", repr(err))
-                result[partition] = None
-                if self.debug:
-                    raise err
-
+            _,value = self._retrieve_partition(partition, key)
+            result[partition] = value
         return result
 
     def store(self, key, values):
@@ -72,31 +56,52 @@ class DataStore:
             raise DataStoreException("No value passed to data store. Did your analytics function return a value?.")
 
         for partition in values:
-            try:
-                if partition in self.writable:
-                    if "." in partition:
-                        words = partition.split(".")
-                        partition = words[0]
-                        attr = words[1:]
-                    else:
-                        attr = None
+            self._store_partition(partition, key, value)
 
-                    if partition in self.partitions:
-                        params = self._merge_params(key, partition)
-                        store = self.partitions[partition]['model'].split(",")
-                        ds = eval(store[len(store)-1] + '(params)')
-                        if attr is None:
-                            ds.put(values[partition])
-                        else:
-                            ds.update(attr, values[partition + "." + ".".join(attr)])
+    def _retrieve_partition(self, partition, key):
+        try:
+            params = self._merge_params(key, partition)
+            if self.data:
+                params['data'] = self.data
+            if partition in self.partitions:
+                store = self.partitions[partition]["model"].split(",")
+                ds = eval(store[0] + "(params)")
+            else:
+                ds = SimpleFileDataStore(params)
+            return (partition, ds.get())
+        except Exception as err:
+            print("WARNING:", partition, "- unable to load " + partition + " data for " + key)
+            print("WARNING:", partition, "-", repr(err))
+            if self.debug:
+                raise err
+            return (partition, None)
+
+    def _store_partition(self, partition, key, value):
+        try:
+            if partition in self.writable:
+                if "." in partition:
+                    words = partition.split(".")
+                    partition = words[0]
+                    attr = words[1:]
                 else:
-                    print("storing " + partition + " data not supported")
-            except Exception as err:
-                print("WARNING:", partition, "- unable to store " + partition + " data for " + key)
-                print("WARNING:", partition, "-", repr(err))
-                if self.debug:
-                    raise err
+                    attr = None
 
+                if partition in self.partitions:
+                    params = self._merge_params(key, partition)
+                    store = self.partitions[partition]['model'].split(",")
+                    ds = eval(store[len(store)-1] + '(params)')
+                    if attr is None:
+                        ds.put(values[partition])
+                    else:
+                        ds.update(attr, values[partition + "." + ".".join(attr)])
+            else:
+                print("storing " + partition + " data not supported")
+        except Exception as err:
+            print("WARNING:", partition, "- unable to store " + partition + " data for " + key)
+            print("WARNING:", partition, "-", repr(err))
+            if self.debug:
+                raise err
+    
     def _merge_params(self, key, partition):
         params = merge(self.partitions[partition], self.config["storage"]["defaults"])
         if "key" in params:
