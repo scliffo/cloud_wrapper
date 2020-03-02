@@ -11,12 +11,16 @@ import decimal
 import uuid
 import time
 import types
+from linetimer import CodeTimer
 
 class DataStoreException(Exception):
     """
     Exception class
     """
     pass
+
+session = boto3.Session()
+
 class DataStore:
     """
     Store for data organised by partitions. Partitions can be stored in different locations and systems.
@@ -27,8 +31,8 @@ class DataStore:
         self.partitions = config['storage']['partitions']
         self.readable = config['storage']['inputs']
         self.writable = config['storage']['outputs']
-        if 'debug' in config['storage']:
-            self.debug = config['storage']['debug']
+        if 'debug' in config:
+            self.debug = config['debug']
         else:
             self.debug = False
 
@@ -174,23 +178,21 @@ class _S3DataStore:
     """
     Data store using an S3 bucket
     """
+    s3 = session.client("s3")
+
     def read(self) -> str:
-        s3_obj = self._s3().get_object(Bucket=self.bucketname, Key=self.path)
+        s3_obj = self.s3.get_object(Bucket=self.bucketname, Key=self.path)
         return s3_obj['Body'].read().decode('utf-8').strip()
 
     def write(self, value):
-        self._s3().put_object(Bucket=self.bucketname, Key=self.path, Body=value)
+        self.s3.put_object(Bucket=self.bucketname, Key=self.path, Body=value)
 
     def exists(self) -> bool:
         try:
-            response = self._s3().head_object(Bucket=self.bucketname, Key=self.path)
+            response = self.s3.head_object(Bucket=self.bucketname, Key=self.path)
             return True
         except botocore.exceptions.ClientError:
-            return False
-
-    def _s3(self):
-        session = boto3.Session()
-        return session.client("s3")
+            return False        
 
 # Helper class to convert a DynamoDB item to JSON.
 class _DecimalEncoder(json.JSONEncoder):
@@ -206,6 +208,8 @@ class _DynamoDataStore:
     """
     Data store using a Dynamo table
     """
+    dynamodb = session.resource("dynamodb")
+
     def read(self) -> str:
         result = self._table().get_item(Key=self.key)
         if 'Item' in result:
@@ -220,9 +224,7 @@ class _DynamoDataStore:
         self._table()
 
     def _table(self):
-        session = boto3.Session()
-        dynamodb = session.resource("dynamodb")
-        return dynamodb.Table(self.tablename)
+        return self.dynamodb.Table(self.tablename)
 
 
 class _AppendingDataStore:
@@ -305,6 +307,8 @@ class KinesisStreamOutput:
     """
     Output data to a kinesis stream
     """
+    kinesis = boto3.client('kinesis')
+
     def __init__(self, params):
         self.key = params['key']
         self.partition = params['partition']
@@ -317,26 +321,26 @@ class KinesisStreamOutput:
         return None
 
     def put(self, value):
-        kinesis = boto3.client('kinesis')
         data = json.loads(value)
         if type(data) is list:
             for record in data:
-                self._put_stream(kinesis, record)
+                self._put_stream(record)
         else:
-            self._put_stream(kinesis, data)
+            self._put_stream(data)
 
     def update(self, attr, value):
         pass
 
-    def _put_stream(self, kinesis, record):
+    def _put_stream(self, record):
         record['dataType'] = self.datatype
         record['timestamp'] = int(time.time() * 1000)
         record['tenantId'] = self.tenant
         record['motorId'] = self.key
         record['deviceId'] = self.deviceId
-        kinesis.put_record(StreamName=self.streamname,
-            Data=json.dumps(record).encode(),
-            PartitionKey=str(uuid.uuid4()))
+        with CodeTimer('put_stream'):
+            self.kinesis.put_record(StreamName=self.streamname,
+                Data=json.dumps(record).encode(),
+                PartitionKey=str(uuid.uuid4()))
 
 class SimpleFileDataStore(_UpdatableDataStore, _FileDataStore):
     """

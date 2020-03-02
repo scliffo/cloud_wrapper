@@ -5,6 +5,7 @@ import json
 import importlib
 from jsonmerge import merge
 import os
+from linetimer import CodeTimer
 
 if __package__ == '':
     import storage
@@ -25,7 +26,10 @@ def analyse(device, config=None, data=None):
     Analytics runs and updates data objects as necessary
     Updates are persisted to storage medium
     """
+    with CodeTimer('analyse'):
+        _run_analysis(device, config=config, data=data)
 
+def _run_analysis(device, config=None, data=None):
     # If CW_CONFIG is set use it to find configuration
     # Otherwise look for config/default.json or config/configure.py in that order
     if 'CW_CONFIG' in os.environ:
@@ -51,4 +55,10 @@ def analyse(device, config=None, data=None):
         analytics = importlib.import_module('process.analytics')
 
     data_store = storage.DataStore(analytics_config, data)
-    data_store.store(device, analytics.process(data_store.retrieve(device)))
+    with CodeTimer('retrieve data'):
+        device_data = data_store.retrieve(device)
+    with CodeTimer('process data'):
+        result = analytics.process(device_data)
+    with CodeTimer('store data'):
+        data_store.store(device, result)
+
