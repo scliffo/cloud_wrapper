@@ -3,3 +3,4 @@ botocore==1.14.11
 jsonmerge
 python-dateutil==2.8
 numpyencoder
+linetimer
