@@ -12,6 +12,7 @@ import uuid
 import time
 import types
 from linetimer import CodeTimer
+from concurrent.futures import ThreadPoolExecutor
 
 class DataStoreException(Exception):
     """
@@ -56,7 +57,7 @@ class DataStore:
             raise DataStoreException("No value passed to data store. Did your analytics function return a value?.")
 
         for partition in values:
-            self._store_partition(partition, key, value)
+            self._store_partition(partition, key, values)
 
     def _retrieve_partition(self, partition, key):
         try:
@@ -76,7 +77,7 @@ class DataStore:
                 raise err
             return (partition, None)
 
-    def _store_partition(self, partition, key, value):
+    def _store_partition(self, partition, key, values):
         try:
             if partition in self.writable:
                 if "." in partition:
@@ -129,6 +130,27 @@ class DataStore:
             print("ERROR:", partition, "key:", key, " partition:", partition)
             print("ERROR:", partition, "-", repr(err))
 
+
+class ConcurrentDataStore(DataStore):
+    def retrieve(self, key):
+        readers = []
+        with ThreadPoolExecutor(max_workers=len(self.readable)) as executor:
+            for partition in self.readable:
+                readers.append(executor.submit(self._retrieve_partition, partition, key))
+        
+        result = {}
+        for reader in readers:
+            partition,value = reader.result()
+            result[partition] = value
+        return result
+
+    def store(self, key, values):
+        if values is None:
+            raise DataStoreException("No value passed to data store. Did your analytics function return a value?.")
+
+        with ThreadPoolExecutor(max_workers=len(self.readable)) as executor:
+            for partition in values:
+                executor.submit(self._store_partition, partition, key, values)
 
 class _UpdatableDataStore:
     """
@@ -342,10 +364,9 @@ class KinesisStreamOutput:
         record['tenantId'] = self.tenant
         record['motorId'] = self.key
         record['deviceId'] = self.deviceId
-        with CodeTimer('put_stream'):
-            self.kinesis.put_record(StreamName=self.streamname,
-                Data=json.dumps(record).encode(),
-                PartitionKey=str(uuid.uuid4()))
+        self.kinesis.put_record(StreamName=self.streamname,
+            Data=json.dumps(record).encode(),
+            PartitionKey=str(uuid.uuid4()))
 
 class SimpleFileDataStore(_UpdatableDataStore, _FileDataStore):
     """

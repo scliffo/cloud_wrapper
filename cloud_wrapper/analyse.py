@@ -55,7 +55,7 @@ def _run_analysis(device, config=None, data=None):
         analytics = importlib.import_module('process.analytics')
 
     with CodeTimer('create data store'):
-        data_store = storage.DataStore(analytics_config, data)
+        data_store = storage.ConcurrentDataStore(analytics_config, data)
     with CodeTimer('retrieve data'):
         device_data = data_store.retrieve(device)
     with CodeTimer('process data'):
