@@ -68,8 +68,12 @@ class DataStore:
             if self.data:
                 params['data'] = self.data
             if partition in self.partitions:
-                store = self.partitions[partition]["model"].split(",")
-                ds = eval(store[0] + "(params)")
+                model = self.partitions[partition]["model"]
+                if type(model) is str:
+                    store = model.split(",")
+                    ds = eval(store[0] + "(params)")
+                else:
+                    ds = model(params)
             else:
                 ds = SimpleFileDataStore(params)
             return (partition, ds.get())
