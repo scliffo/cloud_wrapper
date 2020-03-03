@@ -4,23 +4,26 @@ Data storage layer
 from pathlib import Path
 import json
 import boto3
-from boto3.dynamodb.conditions import Attr
 import botocore
 from jsonmerge import merge
 import decimal
 import uuid
 import time
 import types
-from linetimer import CodeTimer
 from concurrent.futures import ThreadPoolExecutor
+
+"""
+AWS access variables
+"""
+session = boto3.Session()
+s3 = session.client("s3")
+dynamodb = session.resource("dynamodb")
 
 class DataStoreException(Exception):
     """
     Exception class
     """
     pass
-
-session = boto3.Session()
 
 class DataStore:
     """
@@ -205,18 +208,16 @@ class _S3DataStore:
     """
     Data store using an S3 bucket
     """
-    s3 = session.client("s3")
-
     def read(self) -> str:
-        s3_obj = self.s3.get_object(Bucket=self.bucketname, Key=self.path)
+        s3_obj = s3.get_object(Bucket=self.bucketname, Key=self.path)
         return s3_obj['Body'].read().decode('utf-8').strip()
 
     def write(self, value):
-        self.s3.put_object(Bucket=self.bucketname, Key=self.path, Body=value)
+        s3.put_object(Bucket=self.bucketname, Key=self.path, Body=value)
 
     def exists(self) -> bool:
         try:
-            response = self.s3.head_object(Bucket=self.bucketname, Key=self.path)
+            response = s3.head_object(Bucket=self.bucketname, Key=self.path)
             return True
         except botocore.exceptions.ClientError:
             return False        
@@ -235,8 +236,6 @@ class _DynamoDataStore:
     """
     Data store using a Dynamo table
     """
-    dynamodb = session.resource("dynamodb")
-
     def read(self) -> str:
         result = self._table().get_item(Key=self.key)
         if 'Item' in result:
@@ -251,7 +250,7 @@ class _DynamoDataStore:
         self._table()
 
     def _table(self):
-        return self.dynamodb.Table(self.tablename)
+        return dynamodb.Table(self.tablename)
 
 
 class _AppendingDataStore:
