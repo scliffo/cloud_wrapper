@@ -11,7 +11,7 @@ import uuid
 import time
 import types
 from concurrent.futures import ThreadPoolExecutor
-from linetimer import CodeTimer
+from jsonschema import validate, ValidationError
 
 """
 AWS access variables
@@ -48,7 +48,7 @@ class DataStore:
         """
         result = {}
         for partition in self.readable:
-            _,value = self._retrieve_partition(partition, key)
+            partition,value = self._retrieve_partition(partition, key)
             result[partition] = value
         return result
 
@@ -60,11 +60,22 @@ class DataStore:
         if values is None:
             raise DataStoreException("No value passed to data store. Did your analytics function return a value?.")
 
-        for partition in values:
+        for partition in self.writable:
             self._store_partition(partition, key, values)
+
+    def _validate(self, partition, value):
+        if 'schema' in self.partitions[partition]:
+            validate(instance=json.loads(value), schema=self.partitions[partition]['schema'])
+
+    def _parse_partition(self, partition):
+        if partition.endswith(':v'):
+            return (partition[:-2], True)
+        else:
+            return (partition, False)
 
     def _retrieve_partition(self, partition, key):
         try:
+            partition,validate = self._parse_partition(partition)
             params = self._merge_params(key, partition)
             if self.data:
                 params['data'] = self.data
@@ -77,7 +88,14 @@ class DataStore:
                     ds = model(params)
             else:
                 ds = SimpleFileDataStore(params)
-            return (partition, ds.get())
+            
+            value = ds.get()
+            if validate:
+                self._validate(partition, value)
+            return (partition, value)
+
+        except ValidationError as err:
+            raise err
         except Exception as err:
             print("WARNING:", partition, "- unable to load " + partition + " data for " + key)
             print("WARNING:", partition, "-", repr(err))
@@ -87,24 +105,31 @@ class DataStore:
 
     def _store_partition(self, partition, key, values):
         try:
-            if partition in self.writable:
-                if "." in partition:
-                    words = partition.split(".")
-                    partition = words[0]
-                    attr = words[1:]
-                else:
-                    attr = None
+            partition,validate = self._parse_partition(partition)
+            if not partition in values:
+                return
 
-                if partition in self.partitions:
-                    params = self._merge_params(key, partition)
-                    store = self.partitions[partition]['model'].split(",")
-                    ds = eval(store[len(store)-1] + '(params)')
-                    if attr is None:
-                        ds.put(values[partition])
-                    else:
-                        ds.update(attr, values[partition + "." + ".".join(attr)])
+            if validate:
+                self._validate(partition, values[partition])
+            
+            if "." in partition:
+                words = partition.split(".")
+                partition = words[0]
+                attr = words[1:]
             else:
-                print("storing " + partition + " data not supported")
+                attr = None
+
+            if partition in self.partitions:
+                params = self._merge_params(key, partition)
+                store = self.partitions[partition]['model'].split(",")
+                ds = eval(store[len(store)-1] + '(params)')
+                if attr is None:
+                    ds.put(values[partition])
+                else:
+                    ds.update(attr, values[partition + "." + ".".join(attr)])
+
+        except ValidationError as err:
+            raise err
         except Exception as err:
             print("WARNING:", partition, "- unable to store " + partition + " data for " + key)
             print("WARNING:", partition, "-", repr(err))
@@ -157,7 +182,7 @@ class ConcurrentDataStore(DataStore):
             raise DataStoreException("No value passed to data store. Did your analytics function return a value?.")
 
         with ThreadPoolExecutor(max_workers=len(self.readable)) as executor:
-            for partition in values:
+            for partition in self.writable:
                 executor.submit(self._store_partition, partition, key, values)
 
 class _UpdatableDataStore:
@@ -424,8 +449,7 @@ class DynamoCollectionDataStore(_DynamoDataStore):
         self.query = params['query']
 
     def get(self) -> str:
-        with CodeTimer('fetch data from ' + self.tablename):
-            return json.dumps(self._table().query(**self.query)['Items'])
+        return json.dumps(self._table().query(**self.query)['Items'])
 
     def put(self, value):
         pass
