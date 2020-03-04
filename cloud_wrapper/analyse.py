@@ -62,7 +62,7 @@ def _run_analysis(device, config=None, data=None):
         with CodeTimer('filter data'):
             print('Using filter module:', analytics_config['filter'])
             filter = importlib.import_module(analytics_config['filter'])
-            device_data = filter.filter(device_data)
+            device_data = filter.filter(analytics_config, device_data)
     with CodeTimer('process data'):
         result = analytics.process(device_data)
     with CodeTimer('store data'):

@@ -11,6 +11,7 @@ import uuid
 import time
 import types
 from concurrent.futures import ThreadPoolExecutor
+from linetimer import CodeTimer
 
 """
 AWS access variables
@@ -423,7 +424,8 @@ class DynamoCollectionDataStore(_DynamoDataStore):
         self.query = params['query']
 
     def get(self) -> str:
-        return json.dumps(self._table().query(**self.query)['Items'])
+        with CodeTimer('fetch data from ' + self.tablename):
+            return json.dumps(self._table().query(**self.query)['Items'])
 
     def put(self, value):
         pass
