@@ -64,8 +64,13 @@ class DataStore:
             self._store_partition(partition, key, values)
 
     def _validate(self, partition, value):
-        if 'schema' in self.partitions[partition]:
-            validate(instance=json.loads(value), schema=self.partitions[partition]['schema'])
+        parts = partition.split('.')
+        if 'schema' in self.partitions[parts[0]]:
+            schema = self.partitions[parts[0]]['schema']
+            for part in parts[1:]:
+                if 'properties' in schema.keys() and part in schema['properties'].keys():
+                    schema = schema['properties'][part]
+            validate(instance=json.loads(value), schema=schema)
 
     def _parse_partition(self, partition):
         if partition.endswith(':v'):
