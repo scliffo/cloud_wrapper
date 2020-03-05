@@ -68,7 +68,7 @@ class DataStore:
         if 'schema' in self.partitions[parts[0]]:
             schema = self.partitions[parts[0]]['schema']
             for part in parts[1:]:
-                if 'properties' in schema.keys() and part in schema['properties'].keys():
+                if 'properties' in schema and part in schema['properties']:
                     schema = schema['properties'][part]
             validate(instance=json.loads(value), schema=schema)
 
