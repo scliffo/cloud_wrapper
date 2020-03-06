@@ -186,9 +186,13 @@ class ConcurrentDataStore(DataStore):
         if values is None:
             raise DataStoreException("No value passed to data store. Did your analytics function return a value?.")
 
+        writers = []
         with ThreadPoolExecutor(max_workers=len(self.readable)) as executor:
             for partition in self.writable:
-                executor.submit(self._store_partition, partition, key, values)
+                writers.append(executor.submit(self._store_partition, partition, key, values))
+
+        for writer in writers:
+            writer.result()
 
 class _UpdatableDataStore:
     """

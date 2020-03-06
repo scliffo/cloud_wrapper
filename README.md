@@ -61,6 +61,9 @@ or
 
     python -m cloud_wrapper (device-id) (samples-folder)
 
+You can set the configuration to load using the environment variable `CW_CONFIG`.
+By default the package first looks for `config/configure.py` followed by `config/default.json`.
+
 ## Packaging
 
 Some combination of
