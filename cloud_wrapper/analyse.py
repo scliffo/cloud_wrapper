@@ -54,17 +54,20 @@ def _run_analysis(device, config=None, data=None):
     else:
         analytics = importlib.import_module('process.analytics')
 
-    with CodeTimer('create data store'):
+    silent=True
+    if 'codetimer' in analytics_config:
+        silent=not analytics_config['codetimer']
+    with CodeTimer('create data store', silent=silent):
         data_store = storage.ConcurrentDataStore(analytics_config, data)
-    with CodeTimer('retrieve data'):
+    with CodeTimer('retrieve data', silent=silent):
         device_data = data_store.retrieve(device)
     if 'filter' in analytics_config:
-        with CodeTimer('filter data'):
+        with CodeTimer('filter data', silent=silent):
             print('Using filter module:', analytics_config['filter'])
             filter = importlib.import_module(analytics_config['filter'])
             device_data = filter.filter(analytics_config, device_data)
-    with CodeTimer('process data'):
+    with CodeTimer('process data', silent=silent):
         result = analytics.process(device_data)
-    with CodeTimer('store data'):
+    with CodeTimer('store data', silent=silent):
         data_store.store(device, result)
 

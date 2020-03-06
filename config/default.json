@@ -7,9 +7,17 @@
     },
     "partitions": {
       "sample": {
-        "model": "SimpleFileDataStore"
+        "model": "SimpleFileDataStore",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "voltage": {"type": "number"},
+            "speed": {"type": "number"},
+            "name": {"type": "string"}
+          }
+        }
       },
-      "model": {
+      "result": {
         "model": "AppendingFileDataStore"
       }
     },
